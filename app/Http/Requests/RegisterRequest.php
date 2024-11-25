@@ -16,10 +16,10 @@ class RegisterRequest extends FormRequest
     public function rules()
     {
         return [
-            'name' => 'required|string|max:255',
-            'surname' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:8|confirmed',
+            //'name' => 'required|string|max:255',
+            //'surname' => 'required|string|max:255',
+            //'email' => 'required|string|email|max:255|unique:users',
+            //'password' => 'required|string|min:8|confirmed',
             'company' => 'nullable|string|max:255',
             'nif' => 'nullable|string|max:255',
             'address' => 'nullable|string|max:255',
@@ -28,15 +28,17 @@ class RegisterRequest extends FormRequest
             'phone' => 'nullable|string|max:255',
             'prefix_id' => 'nullable|integer|exists:prefixes,id',
             'role_id' => 'required|integer|exists:roles,id',
+            'terms_conditions' => 'required|boolean',
+            'privacy_policy' => 'required|boolean',
         ];
     }
 
     protected function failedValidation(Validator $validator)
     {
         $errors = $validator->errors();
-        throw new HttpResponseException(response()->json([
+        return response()->json([
             'success' => false,
             'errors' => $errors
-        ], 422));
+        ], 422);
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\RegisterRequest;
 use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
@@ -10,7 +11,7 @@ use Illuminate\Validation\ValidationException;
 class AuthController extends Controller
 {
     // Método para registrar un nuevo usuario
-    public function register(Request $request)
+    public function register(RegisterRequest $request)
     {
         $request->validate([
             'name' => 'required|string|max:255',
