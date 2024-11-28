@@ -12,10 +12,17 @@ Route::get('/user', function (Request $request) {
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/email/resend', [AuthController::class, 'resendVerificationEmail'])->middleware('auth:api')->name('verification.resend');
+Route::get('/email/verify/{id}/{hash}', [AuthController::class, 'verifyEmail'])->middleware(['auth:api', 'signed'])->name('verification.verify');
+Route::get('/email/verify-status', [AuthController::class, 'checkVerificationStatus'])->middleware('auth:api');
+Route::post('/resend-code', [AuthController::class, 'resendCode'])->middleware('throttle:5,1');
+Route::post('/verify-code', [AuthController::class, 'verifyCode'])->middleware('throttle:5,1');
+
 
 //ROLES Y PERMISOS
-Route::get('/selectableRoles', [RolesController::class, 'getSelectableRoles']);
 Route::post('/validate-user-first-step', [UserValidationController::class, 'validateUserFirstStep']);
+Route::get('/get-first-step-data', [UserValidationController::class, 'firstStepData']);
+
 
 Route::get('/test', function () {
     return response()->json(['status' => 'API ERROR'], 500);
