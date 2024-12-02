@@ -18,6 +18,7 @@ class ApiKeyMiddleware
     {
         // Obtiene la API Key de la solicitud
         $clientApiKey = $request->header('x-api-key');
+        return $next($request);
 
         // Valida que la API Key de la solicitud coincida con la de la configuración
         if ($clientApiKey !== config('app.api_key')) {

@@ -2,16 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\RegisterRequest;
-use Illuminate\Http\Request;
 use App\Models\User;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\ValidationException;
-use Spatie\Permission\Models\Role;
-use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Support\Str;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Spatie\Permission\Models\Role;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use App\Http\Requests\RegisterRequest;
+use Illuminate\Validation\ValidationException;
+use Illuminate\Foundation\Auth\EmailVerificationRequest;
 
 class AuthController extends Controller
 {
@@ -98,8 +99,6 @@ class AuthController extends Controller
     // Método para iniciar sesión y obtener un token
     public function login(Request $request)
     {
-        dd($request);
-
         $request->validate([
             'email' => 'required|string|email',
             'password' => 'required|string',
@@ -112,10 +111,43 @@ class AuthController extends Controller
             return response()->json(['message' => 'Las credenciales no son correctas'], 401);
         }
 
-        // Crear el token de acceso
-        $token = $user->createToken('access_token')->plainTextToken;
+        // Si el usuario ya existe, inicia sesión
+        Auth::login($user);
 
-        return response()->json(['token' => $token], 200);
+        // Genera un Access Token
+        $tokenResult = $user->createToken('access_token');
+        $token = $tokenResult->accessToken;
+
+        // Obtener el rol y país del usuario
+        $role = $user->roles->first(); // Obtiene el primer rol asignado al usuario
+        $country = $user->country;    // Relación belongsTo con Country
+
+        // Construir la respuesta del usuario
+        $userResponse = [
+            'id' => $user->id,
+            'name' => $user->name,
+            'surname' => $user->surname,
+            'email' => $user->email,
+            'company' => $user->company,
+            'nif' => $user->nif,
+            'address' => $user->address,
+            'city' => $user->city,
+            'zip_code' => $user->zip_code,
+            'phone' => $user->phone,
+            'prefix_id' => $user->prefix_id,
+            'code_prefix' => $country->codeISO2 ?? null, // Manejo de nulos
+            'role_id' => $role->id ?? null,              // Manejo de nulos
+            'role' => $role->name ?? null,               // Nombre del rol (manejo de nulos)
+            'country_id' => $user->country_id,
+            'country' => __('countries.' . ($country->language_field ?? '')), // Manejo de nulos
+            'email_verified_at' => $user->email_verified_at,
+        ];
+
+        return response()->json([
+            'message' => 'Inicio de sesión exitoso',
+            'user' => $userResponse,
+            'token' => $token,
+        ], 200);
     }
 
     // Método para cerrar sesión y revocar el token
