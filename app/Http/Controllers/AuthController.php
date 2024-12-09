@@ -82,7 +82,7 @@ class AuthController extends Controller
             DB::commit();
 
             // Para localhost
-            $cookie = cookie('access_token', $accessToken, 60, null, null, false, true); // 60 minutes, HttpOnly
+            $cookie = cookie(name: 'refresh_token', value: $refreshToken, minutes: 60, path: null, domain: 'localhost', secure: false, httpOnly: true); // 60 minutes, HttpOnly
 
             // Para producción
             // $cookie = cookie('access_token', $accessToken, 60, '/', 'yourdomain.com', true, true); // 60 minutes, Secure, HttpOnly
@@ -90,7 +90,7 @@ class AuthController extends Controller
             return response()->json([
                 'message' => 'Usuario registrado correctamente',
                 'user' => $userResponse,
-                'refresh_token' => $refreshToken,
+                'access_token' => $accessToken,
             ], 201)->cookie($cookie);
 
         } catch (\Throwable $th) {
@@ -147,7 +147,7 @@ class AuthController extends Controller
         ];
 
         // Para localhost
-        $cookie = cookie('access_token', $accessToken, 60, null, null, false, true); // 60 minutes, HttpOnly
+        $cookie = cookie('refresh_token', $refreshToken, 60, null, null, false, true); // 60 minutes, HttpOnly
 
         // Para producción
         // $cookie = cookie('access_token', $accessToken, 60, '/', 'yourdomain.com', true, true); // 60 minutes, Secure, HttpOnly
@@ -155,7 +155,7 @@ class AuthController extends Controller
         return response()->json([
             'message' => 'Inicio de sesión exitoso',
             'user' => $userResponse,
-            'refresh_token' => $refreshToken,
+            'access_token' => $accessToken,
         ], 200)->cookie($cookie);
     }
 
@@ -271,7 +271,6 @@ class AuthController extends Controller
         try {
             $refreshToken = $request->input('refresh_token');
 
-            // Si usas Passport
             $refreshTokenRepository = app(RefreshTokenRepository::class);
             $refreshTokenModel = $refreshTokenRepository->find($refreshToken);
 
@@ -281,18 +280,12 @@ class AuthController extends Controller
 
             $user = $refreshTokenModel->accessToken->user;
 
-            // Si usas Sanctum
-            // $refreshTokenModel = PersonalAccessToken::findToken($refreshToken);
-            // if (!$refreshTokenModel || $refreshTokenModel->isExpired()) {
-            //     return response()->json(['message' => 'Invalid refresh token'], 401);
-            // }
-            // $user = $refreshTokenModel->tokenable;
-
             $tokenResult = $user->createToken('access_token');
             $accessToken = $tokenResult->accessToken;
+            $refreshToken = $tokenResult->token->id; 
 
             // Para localhost
-            $cookie = cookie('access_token', $accessToken, 60, null, null, false, true); // 60 minutes, HttpOnly
+            $cookie = cookie('refresh_token', $refreshToken, 60, null, null, false, true); // 60 minutes, HttpOnly
 
             // Para producción
             // $cookie = cookie('access_token', $accessToken, 60, '/', 'yourdomain.com', true, true); // 60 minutes, Secure, HttpOnly
