@@ -28,3 +28,4 @@ Route::middleware('web')->group(function () {
 //ROLES Y PERMISOS
 Route::post('/validate-user-first-step', [UserValidationController::class, 'validateUserFirstStep']);
 Route::get('/get-first-step-data', [UserValidationController::class, 'firstStepData']);
+Route::post('/refresh-token', [AuthController::class, 'refreshToken'])->middleware('auth:api');

@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use App\Http\Requests\RegisterRequest;
+use Laravel\Passport\RefreshTokenRepository;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
 
@@ -70,20 +71,27 @@ class AuthController extends Controller
             ];
 
 
-            // Enviar correo de verificación
+             // Enviar correo de verificación
             Mail::to($user->email)->send(new \App\Mail\VerificationCodeMail($user->verification_code));
-    
+
             // Simular inicio de sesión
             $tokenResult = $user->createToken('access_token');
-            $token = $tokenResult->accessToken;  
-    
+            $accessToken = $tokenResult->accessToken;
+            $refreshToken = $tokenResult->token->id; // Assuming you are using Passport or Sanctum
+
             DB::commit();
+
+            // Para localhost
+            $cookie = cookie('access_token', $accessToken, 60, null, null, false, true); // 60 minutes, HttpOnly
+
+            // Para producción
+            // $cookie = cookie('access_token', $accessToken, 60, '/', 'yourdomain.com', true, true); // 60 minutes, Secure, HttpOnly
 
             return response()->json([
                 'message' => 'Usuario registrado correctamente',
                 'user' => $userResponse,
-                'token' => $token,
-            ], 201);
+                'refresh_token' => $refreshToken,
+            ], 201)->cookie($cookie);
 
         } catch (\Throwable $th) {
             
@@ -104,24 +112,19 @@ class AuthController extends Controller
             'password' => 'required|string',
         ]);
 
-    
-        $user = User::where('email', $request->email)->first();
 
-        if (! $user || ! Hash::check($request->password, $user->password)) {
-            return response()->json(['message' => 'Las credenciales no son correctas'], 401);
+        if (!Auth::attempt($request->only('email', 'password'))) {
+            return response()->json(['message' => 'Credenciales incorrectas'], 401);
         }
-
-        // Si el usuario ya existe, inicia sesión
-        Auth::login($user);
-
-        // Genera un Access Token
+    
+        $user = Auth::user();
         $tokenResult = $user->createToken('access_token');
-        $token = $tokenResult->accessToken;
-
-        // Obtener el rol y país del usuario
+        $accessToken = $tokenResult->accessToken;
+        $refreshToken = $tokenResult->token->id; // Assuming you are using Passport or Sanctum
+    
         $role = $user->roles->first(); // Obtiene el primer rol asignado al usuario
         $country = $user->country;    // Relación belongsTo con Country
-
+    
         // Construir la respuesta del usuario
         $userResponse = [
             'id' => $user->id,
@@ -143,11 +146,17 @@ class AuthController extends Controller
             'email_verified_at' => $user->email_verified_at,
         ];
 
+        // Para localhost
+        $cookie = cookie('access_token', $accessToken, 60, null, null, false, true); // 60 minutes, HttpOnly
+
+        // Para producción
+        // $cookie = cookie('access_token', $accessToken, 60, '/', 'yourdomain.com', true, true); // 60 minutes, Secure, HttpOnly
+
         return response()->json([
             'message' => 'Inicio de sesión exitoso',
             'user' => $userResponse,
-            'token' => $token,
-        ], 200);
+            'refresh_token' => $refreshToken,
+        ], 200)->cookie($cookie);
     }
 
     // Método para cerrar sesión y revocar el token
@@ -251,6 +260,51 @@ class AuthController extends Controller
         $user->save();
 
         return response()->json(['message' => 'Email successfully verified.'], 200);
+    }
+
+    public function refreshToken(Request $request)
+    {
+        $request->validate([
+            'refresh_token' => 'required|string',
+        ]);
+
+        try {
+            $refreshToken = $request->input('refresh_token');
+
+            // Si usas Passport
+            $refreshTokenRepository = app(RefreshTokenRepository::class);
+            $refreshTokenModel = $refreshTokenRepository->find($refreshToken);
+
+            if (!$refreshTokenModel || $refreshTokenModel->revoked) {
+                return response()->json(['message' => 'Invalid refresh token'], 401);
+            }
+
+            $user = $refreshTokenModel->accessToken->user;
+
+            // Si usas Sanctum
+            // $refreshTokenModel = PersonalAccessToken::findToken($refreshToken);
+            // if (!$refreshTokenModel || $refreshTokenModel->isExpired()) {
+            //     return response()->json(['message' => 'Invalid refresh token'], 401);
+            // }
+            // $user = $refreshTokenModel->tokenable;
+
+            $tokenResult = $user->createToken('access_token');
+            $accessToken = $tokenResult->accessToken;
+
+            // Para localhost
+            $cookie = cookie('access_token', $accessToken, 60, null, null, false, true); // 60 minutes, HttpOnly
+
+            // Para producción
+            // $cookie = cookie('access_token', $accessToken, 60, '/', 'yourdomain.com', true, true); // 60 minutes, Secure, HttpOnly
+
+            return response()->json([
+                'message' => 'Token refreshed successfully',
+                'access_token' => $accessToken,
+            ])->cookie($cookie);
+
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Could not refresh token'], 500);
+        }
     }
 
 
