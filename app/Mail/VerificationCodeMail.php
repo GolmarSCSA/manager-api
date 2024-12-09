@@ -21,6 +21,11 @@ class VerificationCodeMail extends Mailable
     {
         return $this->subject('Your Verification Code')
                     ->view('emails.verification_code')
-                    ->with(['code' => $this->code]);
+                    ->with([
+                        'code' => $this->code,
+                        'title' => "Test",
+                        'text' => "Text test",
+                        'footer' => "test footer"
+                    ]);
     }
 }
