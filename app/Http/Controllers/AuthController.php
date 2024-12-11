@@ -12,7 +12,6 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use App\Http\Requests\RegisterRequest;
 use Laravel\Passport\RefreshTokenRepository;
-use Illuminate\Validation\ValidationException;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
 
 class AuthController extends Controller
@@ -117,6 +116,7 @@ class AuthController extends Controller
             return response()->json(['message' => 'Credenciales incorrectas'], 401);
         }
     
+        /** @var User */
         $user = Auth::user();
         $tokenResult = $user->createToken('access_token');
         $accessToken = $tokenResult->accessToken;
@@ -159,12 +159,21 @@ class AuthController extends Controller
         ], 200)->cookie($cookie);
     }
 
-    // Método para cerrar sesión y revocar el token
     public function logout(Request $request)
     {
-        $request->user()->tokens()->delete();
+        // Eliminar todos los tokens del usuario autenticado
+/*         $request->user()->tokens->each(function ($token) {
+            $token->revoke();
+        }); */
 
-        return response()->json(['message' => 'Sesión cerrada correctamente'], 200);
+        //Solo la sesión actual
+        $request->user()->token()->revoke();
+
+        // Configurar la respuesta con la cookie eliminada
+        return response()->json(['message' => 'Sesión cerrada correctamente'], 200)
+            ->cookie('refresh_token', '', 0, '/', null, app()->environment('production'), true);
+
+        // Producción: 'null' por tu api-manager.golmar.es
     }
 
     /**
