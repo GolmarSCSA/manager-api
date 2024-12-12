@@ -17,7 +17,7 @@ use Illuminate\Foundation\Auth\EmailVerificationRequest;
 class AuthController extends Controller
 {
     // Método para registrar un nuevo usuario
-    public function register(RegisterRequest $request)
+    public function register_old(RegisterRequest $request)
     {
 
         try {
@@ -83,6 +83,71 @@ class AuthController extends Controller
             // Para localhost
             $cookie = cookie(name: 'refresh_token', value: $refreshToken, minutes: 60, path: null, domain: 'localhost', secure: false, httpOnly: true); // 60 minutes, HttpOnly
 
+            // Para producción
+            // $cookie = cookie('access_token', $accessToken, 60, '/', 'yourdomain.com', true, true); // 60 minutes, Secure, HttpOnly
+
+            return response()->json([
+                'message' => 'Usuario registrado correctamente',
+                'user' => $userResponse,
+                'access_token' => $accessToken,
+            ], 201)->cookie($cookie);
+
+        } catch (\Throwable $th) {
+            
+            DB::rollBack();
+
+            return response()->json(['message' => $th->getMessage()], 500);
+            //throw $th;
+        }
+
+        
+    }
+
+    public function register(RegisterRequest $request)
+    {
+
+        try {
+            DB::beginTransaction();
+
+            $user = User::create([
+                'name' => $request->name,
+                'surname' => $request->surname,
+                'email' => $request->email,
+                'password' => Hash::make($request->password), 
+                'terms_conditions' => $request->terms_conditions,
+                'privacy_policy' => $request->privacy_policy,
+                'verification_code' => Str::random(6), // Genera un código aleatorio de 6 caracteres
+                'verification_expires_at' => now()->addMinutes(15), // Expira en 15 minutos
+            ]);
+
+            $userResponse = [
+                'id' => $user->id,
+                'name' => $user->name,
+                'surname' => $user->surname,
+                'email' => $user->email,
+                'email_verified_at' => $user->email_verified_at,
+            ];
+
+            // Enviar correo de verificación
+            Mail::to($user->email)->send(new \App\Mail\VerificationCodeMail($user->verification_code));
+
+            // Simular inicio de sesión
+            $tokenResult = $user->createToken('access_token');
+            $accessToken = $tokenResult->accessToken;
+            $refreshToken = $tokenResult->token->id; // Assuming you are using Passport or Sanctum
+
+            DB::commit();
+
+            // Para localhost
+            $cookie = cookie(
+                name: 'refresh_token',
+                value: $refreshToken,
+                minutes: 60,
+                path: '/',
+                domain: null, // Usa null para que Laravel determine el dominio automáticamente
+                secure: false, // Asegúrate de usar false en localhost
+                httpOnly: true
+            );
             // Para producción
             // $cookie = cookie('access_token', $accessToken, 60, '/', 'yourdomain.com', true, true); // 60 minutes, Secure, HttpOnly
 
