@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\Country;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -16,92 +17,6 @@ use Illuminate\Foundation\Auth\EmailVerificationRequest;
 
 class AuthController extends Controller
 {
-    // Método para registrar un nuevo usuario
-    public function register_old(RegisterRequest $request)
-    {
-
-        try {
-            DB::beginTransaction();
-
-            $user = User::create([
-                'name' => $request->name,
-                'surname' => $request->surname,
-                'email' => $request->email,
-                'password' => Hash::make($request->password), 
-                'company' => $request->company, 
-                'nif' => $request->nif, 
-                'address' => $request->address,
-                'city' => $request->city, 
-                'zip_code' => $request->zip_code,
-                'phone' => $request->phone,
-                'prefix_id' => $request->prefix_id,
-                'role_id' => $request->role_id, 
-                'terms_conditions' => $request->terms_conditions,
-                'privacy_policy' => $request->privacy_policy,
-                'country_id' => $request->country_id, 
-                'verification_code' => Str::random(6), // Genera un código aleatorio de 6 caracteres
-                'verification_expires_at' => now()->addMinutes(15), // Expira en 15 minutos
-            ]);
-
-            $role = Role::find($request->role_id);
-
-            $user->assignRole($role->name);
-
-            $country = $user->country;
-            
-            $userResponse = [
-                'id' => $user->id,
-                'name' => $user->name,
-                'surname' => $user->surname,
-                'email' => $user->email,
-                'company' => $user->company,
-                'nif' => $user->nif,
-                'address' => $user->address,
-                'city' => $user->city,
-                'zip_code' => $user->zip_code,
-                'phone' => $user->phone,
-                'prefix_id' => $user->prefix_id,
-                'code_prefix' => $country->codeISO2,
-                'role_id' => $role->id,
-                'role' => $role->name,
-                'country_id' => $user->country_id,
-                'country' => __('countries.' . $country->language_field),
-                'email_verified_at' => $user->email_verified_at,
-            ];
-
-
-             // Enviar correo de verificación
-            Mail::to($user->email)->send(new \App\Mail\VerificationCodeMail($user->verification_code));
-
-            // Simular inicio de sesión
-            $tokenResult = $user->createToken('access_token');
-            $accessToken = $tokenResult->accessToken;
-            $refreshToken = $tokenResult->token->id; // Assuming you are using Passport or Sanctum
-
-            DB::commit();
-
-            // Para localhost
-            $cookie = cookie(name: 'refresh_token', value: $refreshToken, minutes: 60, path: null, domain: 'localhost', secure: false, httpOnly: true); // 60 minutes, HttpOnly
-
-            // Para producción
-            // $cookie = cookie('access_token', $accessToken, 60, '/', 'yourdomain.com', true, true); // 60 minutes, Secure, HttpOnly
-
-            return response()->json([
-                'message' => 'Usuario registrado correctamente',
-                'user' => $userResponse,
-                'access_token' => $accessToken,
-            ], 201)->cookie($cookie);
-
-        } catch (\Throwable $th) {
-            
-            DB::rollBack();
-
-            return response()->json(['message' => $th->getMessage()], 500);
-            //throw $th;
-        }
-
-        
-    }
 
     public function register(RegisterRequest $request)
     {
@@ -109,52 +24,33 @@ class AuthController extends Controller
         try {
             DB::beginTransaction();
 
-            $user = User::create([
-                'name' => $request->name,
-                'surname' => $request->surname,
-                'email' => $request->email,
-                'password' => Hash::make($request->password), 
-                'terms_conditions' => $request->terms_conditions,
-                'privacy_policy' => $request->privacy_policy,
-                'verification_code' => Str::random(6), // Genera un código aleatorio de 6 caracteres
-                'verification_expires_at' => now()->addMinutes(15), // Expira en 15 minutos
-            ]);
+            $user = $this->createUser($request);
+            $userResponse = $this->generateUserResponse($user, $request->input('lang', 'es'));
 
-            $userResponse = [
-                'id' => $user->id,
-                'name' => $user->name,
-                'surname' => $user->surname,
-                'email' => $user->email,
-                'email_verified_at' => $user->email_verified_at,
-            ];
-
-            // Enviar correo de verificación
-            Mail::to($user->email)->send(new \App\Mail\VerificationCodeMail($user->verification_code));
-
-            // Simular inicio de sesión
             $tokenResult = $user->createToken('access_token');
             $accessToken = $tokenResult->accessToken;
-            $refreshToken = $tokenResult->token->id; // Assuming you are using Passport or Sanctum
+            $refreshToken = $tokenResult->token->id; 
 
-            DB::commit();
+            Mail::to($user->email)->send(new \App\Mail\VerificationCodeMail($user->verification_code));
 
-            // Para localhost
             $cookie = cookie(
                 name: 'refresh_token',
                 value: $refreshToken,
                 minutes: 60,
                 path: '/',
-                domain: null, // Usa null para que Laravel determine el dominio automáticamente
-                secure: false, // Asegúrate de usar false en localhost
+                domain: null, 
+                secure: false, 
                 httpOnly: true
             );
-            // Para producción
-            // $cookie = cookie('access_token', $accessToken, 60, '/', 'yourdomain.com', true, true); // 60 minutes, Secure, HttpOnly
+
+            DB::commit();
 
             return response()->json([
                 'message' => 'Usuario registrado correctamente',
-                'user' => $userResponse,
+                'user' => $userResponse['user'],
                 'access_token' => $accessToken,
+                'roles' => $userResponse['roles'],
+                'countries' => $userResponse['countries'],
             ], 201)->cookie($cookie);
 
         } catch (\Throwable $th) {
@@ -162,10 +58,60 @@ class AuthController extends Controller
             DB::rollBack();
 
             return response()->json(['message' => $th->getMessage()], 500);
-            //throw $th;
         }
 
         
+    }
+
+
+    private function createUser($request)
+    {
+        return User::create([
+            'name' => $request->name,
+            'surname' => $request->surname,
+            'email' => $request->email,
+            'password' => Hash::make($request->password),
+            'terms_conditions' => $request->terms_conditions,
+            'privacy_policy' => $request->privacy_policy,
+            'verification_code' => Str::random(6), 
+            'verification_expires_at' => now()->addMinutes(15),
+        ]);
+    }
+
+    private function generateUserResponse($user, $lang)
+    {
+        $roles = Role::whereIn('id', [config('app.roles.installer'), config('app.roles.building_administrator')])->get();
+        $countries = Country::all();
+
+        $result_countries = $countries->map(function ($country) use ($lang) {
+            return [
+                'id' => $country->id,
+                'name' => (__('countries.' . $country->language_field, [], $lang) ?? $country->country_es),
+                'code' => $country->codeISO2,
+                'prefix' => $country->tel_prefix,
+            ];
+        });
+
+        $result_roles = $roles->map(function ($role) use ($lang) {
+            return [
+                'id' => $role->id,
+                'name' => trans('roles.' . $role->name, [], $lang),
+            ];
+        });
+
+        $userResponse = [
+            'id' => $user->id,
+            'name' => $user->name,
+            'surname' => $user->surname,
+            'email' => $user->email,
+            'email_verified_at' => $user->email_verified_at,
+        ];
+
+        return [
+            'user' => $userResponse,
+            'roles' => $result_roles,
+            'countries' => $result_countries,
+        ];
     }
 
     // Método para iniciar sesión y obtener un token

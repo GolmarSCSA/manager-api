@@ -3,11 +3,11 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\SocialAuthController;
-use App\Http\Controllers\UserValidationController;
+use App\Http\Controllers\UserController;
 
 
 Route::post('/register', [AuthController::class, 'register']);
-Route::get('/get-first-step-data', [UserValidationController::class, 'firstStepData']);
+Route::get('/wizard-step-1', [UserController::class, 'firstStepWizard']);
 //Route::post('/validate-user-first-step', [UserValidationController::class, 'validateUserFirstStep']);
 Route::post('/login', [AuthController::class, 'login']);
 
