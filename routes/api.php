@@ -7,7 +7,7 @@ use App\Http\Controllers\UserController;
 
 
 Route::post('/register', [AuthController::class, 'register']);
-Route::get('/wizard-step-1', [UserController::class, 'firstStepWizard']);
+Route::post('/wizard-step-1', [UserController::class, 'firstStepWizard']);
 //Route::post('/validate-user-first-step', [UserValidationController::class, 'validateUserFirstStep']);
 Route::post('/login', [AuthController::class, 'login']);
 
