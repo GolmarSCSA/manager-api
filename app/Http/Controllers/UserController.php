@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Auth;
 
 class UserController extends Controller
 {
-    public function firstStepWizard(FirstStepRequest $request)
+    public function firstStepWizard(Request $request)
     {
         
         try {
@@ -57,6 +57,7 @@ class UserController extends Controller
 
         } catch (\Throwable $th) {
             DB::rollBack();
+            return dd($th);
             return response()->json(['message' => $th->getMessage()], 500);
         }
 
@@ -91,11 +92,11 @@ class UserController extends Controller
             'zip_code' => $user->zip_code,
             'phone' => $user->phone,
             'prefix_id' => $user->prefix_id,
-            'code_prefix' => $country->codeISO2,
+            'code_prefix' => $country->codeISO2 ?? null,
             'role_id' => $role->id,
             'role' => $role->name,
             'country_id' => $user->country_id,
-            'country' => __('countries.' . $country->language_field),
+            'country' => isset($country) ? __('countries.' . $country->language_field) : null,
             'email_verified_at' => $user->email_verified_at,
         ];
     }

@@ -7,13 +7,14 @@ use App\Http\Controllers\UserController;
 
 
 Route::post('/register', [AuthController::class, 'register']);
-Route::post('/wizard-step-1', [UserController::class, 'firstStepWizard']);
+
 //Route::post('/validate-user-first-step', [UserValidationController::class, 'validateUserFirstStep']);
 Route::post('/login', [AuthController::class, 'login']);
 
 Route::middleware('auth:api')->group(function () {
     //VERIFY
-    Route::get('/email/verify-status', [AuthController::class, 'checkVerificationStatus'])->middleware('auth:api');
+    Route::get('/email/verify-status', [AuthController::class, 'checkVerificationStatus']);
+    Route::post('/wizard-step-1', [UserController::class, 'firstStepWizard'])->middleware('auth:api');
     Route::middleware('throttle:5,1')->group(function () {
         Route::post('/resend-code', [AuthController::class, 'resendCode']);
         Route::post('/verify-code', [AuthController::class, 'verifyCode']);

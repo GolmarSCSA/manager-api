@@ -22,25 +22,29 @@ class RoleSeeder extends Seeder
         // Crear roles y asignar permisos
         $superAdminRole = Role::updateOrCreate([
             'id' => config(('app.roles.super_admin')),
-            'name' => 'super_admin'
+            'name' => 'super_admin',
+            'guard_name' => 'api'
         ]);
 
         // Crear roles y asignar permisos
         $distributorRole = Role::updateOrCreate([
             'id' => config(('app.roles.distributor')),
-            'name' => 'distributor'
+            'name' => 'distributor',
+            'guard_name' => 'api'
         ]);
 
         // Crear roles y asignar permisos
         $installerRole = Role::updateOrCreate([
             'id' => config(('app.roles.installer')),
-            'name' => 'installer'
+            'name' => 'installer',
+            'guard_name' => 'api'
         ]);
 
         // Crear roles y asignar permisos
         $buildingAdministratorRole = Role::updateOrCreate([
             'id' => config(('app.roles.building_administrator')),
-            'name' => 'building_administrator'
+            'name' => 'building_administrator',
+            'guard_name' => 'api'
         ]);
 
 
