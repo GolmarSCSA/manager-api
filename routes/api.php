@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\SocialAuthController;
 use App\Http\Controllers\UserController;
+use Illuminate\Http\Request;
 
 
 Route::post('/register', [AuthController::class, 'register']);
@@ -23,6 +24,13 @@ Route::middleware('auth:api')->group(function () {
     //AUTH STATUS
     Route::post('/refresh-token', [AuthController::class, 'refreshToken']);
     Route::post('/logout', [AuthController::class, 'logout']);
+
+    Route::get('/validate-token', function (Request $request) {
+        return response()->json([
+            'valid' => true,
+            'user' => $request->user(), // Devuelve la información del usuario autenticado
+        ]);
+    });
 
 }); 
 
