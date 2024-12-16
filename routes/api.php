@@ -12,10 +12,10 @@ Route::post('/register', [AuthController::class, 'register']);
 //Route::post('/validate-user-first-step', [UserValidationController::class, 'validateUserFirstStep']);
 Route::post('/login', [AuthController::class, 'login']);
 
-Route::middleware('auth:api')->group(function () {
+Route::middleware('authApiMiddleware')->group(function () {
     //VERIFY
     Route::get('/email/verify-status', [AuthController::class, 'checkVerificationStatus']);
-    Route::post('/wizard-step-1', [UserController::class, 'firstStepWizard'])->middleware('auth:api');
+    Route::post('/wizard-step-1', [UserController::class, 'firstStepWizard']);
     Route::middleware('throttle:5,1')->group(function () {
         Route::post('/resend-code', [AuthController::class, 'resendCode']);
         Route::post('/verify-code', [AuthController::class, 'verifyCode']);
@@ -28,7 +28,7 @@ Route::middleware('auth:api')->group(function () {
     Route::get('/validate-token', function (Request $request) {
         return response()->json([
             'valid' => true,
-            'user' => $request->user(), // Devuelve la información del usuario autenticado
+            'user' => $request->user(),
         ]);
     });
 
