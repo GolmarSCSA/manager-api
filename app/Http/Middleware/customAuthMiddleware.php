@@ -22,6 +22,8 @@ class customAuthMiddleware
             ], 401);
         }
 
+        Auth::shouldUse('api');
+
         return $next($request);
     }
 }
