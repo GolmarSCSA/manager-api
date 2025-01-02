@@ -175,6 +175,8 @@ class UserController extends Controller
     public function resetPassword(Request $request)
     {
         $verify = $request->validate([
+            'email' => 'required|email',
+            'password_forgot_code' => 'required|string',
             'password' => 'required|string|min:8|confirmed',
         ]);
 
