@@ -12,10 +12,20 @@ Route::post('/register', [AuthController::class, 'register']);
 //Route::post('/validate-user-first-step', [UserValidationController::class, 'validateUserFirstStep']);
 Route::post('/login', [AuthController::class, 'login']);
 
+Route::middleware('throttle:5,1')->group(function () {
+    Route::post('/create-password-forgot-code', [UserController::class, 'createPasswordForgotCode']);
+    Route::post('/validate-password-forgot-code', [UserController::class, 'validatePasswordForgotCode']);
+    Route::post('/change-password', [UserController::class, 'changePassword']);
+});
+
+
 Route::middleware('authApiMiddleware')->group(function () {
     //VERIFY
     Route::get('/email/verify-status', [AuthController::class, 'checkVerificationStatus']);
     Route::post('/wizard-step-1', [UserController::class, 'firstStepWizard']);
+    Route::post('/change-language', [UserController::class, 'changeLanguage']);
+
+
     Route::middleware('throttle:5,1')->group(function () {
         Route::post('/resend-code', [AuthController::class, 'resendCode']);
         Route::post('/verify-code', [AuthController::class, 'verifyCode']);

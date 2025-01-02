@@ -100,4 +100,93 @@ class UserController extends Controller
             'email_verified_at' => $user->email_verified_at,
         ];
     }
+
+    public function changeLanguage(Request $request)
+    {
+
+        $verify = $request->validate([
+            'language' => 'required|string|in:es,en,fr,nl,pt,de,el,ro,bg,hr,pv,cat,ga,sk,sr,da,cs,it',
+        ]);
+
+        /** @var User */
+        $user = Auth::user();
+        $user->language = $request->language;
+        $user->save();
+
+        return response()->json([
+            'status' => 'success',
+        ], 201);
+    }
+
+    public function createPasswordForgotCode(Request $request)
+    {
+        $verify = $request->validate([
+            'email' => 'required|email',
+        ]);
+
+        $user = User::where('email', $request->email)->first();
+
+        if (!$user) {
+            return response()->json([
+                'status' => 'success',
+            ], 200);
+        }
+
+        $user->password_forgot_code = Str::random(6);
+        $user->password_forgot_expires_at = now()->addHours(24);
+        $user->save();
+
+        Mail::to($user->email)->send(new \App\Mail\VerificationCodeMail($user->password_forgot_code));
+
+        return response()->json([
+            'status' => 'success',
+        ], 200);
+
+    }
+
+    public function validatePasswordForgotCode(Request $request)
+    {
+        $verify = $request->validate([
+            'email' => 'required|email',
+            'code' => 'required|string',
+        ]);
+
+        $user = User::where('email', $request->email)
+            ->where('password_forgot_code', $request->code)
+            ->where('password_forgot_expires_at', '>=', now())
+            ->first();
+
+        if (!$user) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Código de verificación incorrecto o expirado',
+            ], 400);
+        }
+
+        $tokenResult = $user->createToken('password_reset_token');
+        $passwordResetToken = $tokenResult->accessToken;
+
+        return response()->json([
+            'status' => 'success',
+            'password_reset_token' => $passwordResetToken,
+        ], 200);
+    }
+
+    public function resetPassword(Request $request)
+    {
+        $verify = $request->validate([
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        /** @var User */
+        $user = Auth::user();
+        $user->password = Hash::make($request->password);
+        $user->password_forgot_code = null;
+        $user->password_forgot_expires_at = null;
+        $user->save();
+
+        return response()->json([
+            'status' => 'success',
+        ], 200);
+    }
 }
