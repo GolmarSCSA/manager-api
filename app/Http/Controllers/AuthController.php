@@ -49,8 +49,6 @@ class AuthController extends Controller
                 'message' => 'Usuario registrado correctamente',
                 'user' => $userResponse['user'],
                 'access_token' => $accessToken,
-                'roles' => $userResponse['roles'],
-                'countries' => $userResponse['countries'],
             ], 201)->cookie($cookie);
 
         } catch (\Throwable $th) {
@@ -80,24 +78,6 @@ class AuthController extends Controller
 
     private function generateUserResponse($user, $lang)
     {
-        $roles = Role::whereIn('id', [config('app.roles.installer'), config('app.roles.building_administrator')])->get();
-        $countries = Country::all();
-
-        $result_countries = $countries->map(function ($country) use ($lang) {
-            return [
-                'id' => $country->id,
-                'name' => (__('countries.' . $country->language_field, [], $lang) ?? $country->country_es),
-                'code' => $country->codeISO2,
-                'prefix' => $country->tel_prefix,
-            ];
-        });
-
-        $result_roles = $roles->map(function ($role) use ($lang) {
-            return [
-                'id' => $role->id,
-                'name' => trans('roles.' . $role->name, [], $lang),
-            ];
-        });
 
         $userResponse = [
             'id' => $user->id,
@@ -109,8 +89,6 @@ class AuthController extends Controller
 
         return [
             'user' => $userResponse,
-            'roles' => $result_roles,
-            'countries' => $result_countries,
         ];
     }
 
@@ -318,6 +296,33 @@ class AuthController extends Controller
         } catch (\Exception $e) {
             return response()->json(['message' => 'Could not refresh token'], 500);
         }
+    }
+
+    function getWizardData()
+    {
+        $roles = Role::whereIn('id', [config('app.roles.installer'), config('app.roles.building_administrator')])->get();
+        $countries = Country::all();
+
+        $result_countries = $countries->map(function ($country) {
+            return [
+                'id' => $country->id,
+                'name' => $country->country_es,
+                'code' => $country->codeISO2,
+                'prefix' => $country->tel_prefix,
+            ];
+        });
+
+        $result_roles = $roles->map(function ($role) {
+            return [
+                'id' => $role->id,
+                'name' => $role->name,
+            ];
+        });
+
+        return response()->json([
+            'roles' => $result_roles,
+            'countries' => $result_countries,
+        ]);
     }
 
 

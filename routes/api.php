@@ -23,15 +23,35 @@ Route::middleware('authApiMiddleware')->group(function () {
 
     //AUTH STATUS
     Route::post('/refresh-token', [AuthController::class, 'refreshToken']);
+    Route::get('/wizardData', [AuthController::class, 'getWizardData']);
     Route::post('/logout', [AuthController::class, 'logout']);
 
     Route::get('/validate-token', function (Request $request) {
-        return response()->json([
-            'valid' => true,
-            'user' => $request->user(),
-        ]);
+        $user = $request->user();
+        $country = $user->country;
+        $role = $user->getRoleNames()->first();
+ 
+        $response = [
+            'name' => $user->name,
+            'surname' => $user->surname,
+            'email' => $user->email,
+            'company' => $user->company,
+            'nif' => $user->nif,
+            'address' => $user->address,
+            'city' => $user->city,
+            'zip_code' => $user->zip_code,
+            'phone' => $user->phone,
+            'prefix_id' => $user->prefix_id,
+            'code_prefix' => $country->codeISO2 ?? null,
+            'role_id' => $role->id ?? null,
+            'role' => $role->name ?? null,
+            'country_id' => $user->country_id,
+            'country' => isset($country) ? __('countries.' . $country->language_field) : null,
+            'email_verified_at' => $user->email_verified_at,
+        ];
+ 
+        return response()->json($response);
     });
-
 }); 
 
 Route::middleware('web')->group(function () {
