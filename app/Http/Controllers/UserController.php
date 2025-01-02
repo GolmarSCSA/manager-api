@@ -57,7 +57,6 @@ class UserController extends Controller
 
         } catch (\Throwable $th) {
             DB::rollBack();
-            return dd($th);
             return response()->json(['message' => $th->getMessage()], 500);
         }
 
