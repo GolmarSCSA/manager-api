@@ -58,6 +58,7 @@ Route::middleware('authApiMiddleware')->group(function () {
             'country_id' => $user->country_id,
             'country' => isset($country) ? __('countries.' . $country->language_field) : null,
             'email_verified_at' => $user->email_verified_at,
+            'language' => $user->language
         ];
  
         return response()->json($response);
