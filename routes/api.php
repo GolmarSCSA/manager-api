@@ -15,7 +15,7 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::middleware('throttle:5,1')->group(function () {
     Route::post('/create-password-forgot-code', [UserController::class, 'createPasswordForgotCode']);
     Route::post('/validate-password-forgot-code', [UserController::class, 'validatePasswordForgotCode']);
-    Route::post('/change-password', [UserController::class, 'changePassword']);
+    Route::post('/change-password', [UserController::class, 'resetPassword']);
 });
 
 

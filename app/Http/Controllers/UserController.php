@@ -11,6 +11,9 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use App\Http\Requests\FirstStepRequest;
 use Illuminate\Support\Facades\Auth;
+use Laravel\Passport\Token;
+use Firebase\JWT\JWT;
+use Firebase\JWT\Key;
 
 class UserController extends Controller
 {
@@ -179,15 +182,45 @@ class UserController extends Controller
             'password' => 'required|string|min:8|confirmed',
         ]);
 
-        /** @var User */
-        $user = Auth::user();
-        $user->password = Hash::make($request->password);
-        $user->password_forgot_code = null;
-        $user->password_forgot_expires_at = null;
-        $user->save();
+        $token = $request->password_forgot_code;
+
+        $user = $this->getUserFromAccessToken($token);
+
+        if ($user->email == $request->email) {  
+            $user->password = Hash::make($request->password);
+            $user->password_forgot_code = null;
+            $user->password_forgot_expires_at = null;
+            $user->save();
+        }
 
         return response()->json([
             'status' => 'success',
         ], 200);
+    }
+
+    public function getUserFromAccessToken($accessToken)
+    {
+        try {
+            // Ruta de la clave pública generada por Laravel Passport
+            $publicKey = file_get_contents(storage_path('oauth-public.key'));
+
+            // Decodificar el token con la clave pública
+            $decodedToken = JWT::decode($accessToken, new Key($publicKey, 'RS256'));
+
+            // El campo 'sub' contiene el ID del usuario
+            $userId = $decodedToken->sub;
+
+            // Buscar el usuario por su ID
+            $user = User::find($userId);
+
+            if (!$user) {
+                return null;
+            }
+
+            return $user;
+
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Token inválido o error al procesar: ' . $e->getMessage()], 400);
+        }
     }
 }
