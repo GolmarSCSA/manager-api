@@ -33,15 +33,8 @@ class AuthController extends Controller
 
             Mail::to($user->email)->send(new \App\Mail\VerificationCodeMail($user->verification_code));
 
-            $cookie = cookie(
-                name: 'refresh_token',
-                value: $refreshToken,
-                minutes: 60,
-                path: '/',
-                domain: null, 
-                secure: false, 
-                httpOnly: true
-            );
+            $cookie = create_cookie($refreshToken);
+            
 
             DB::commit();
 
@@ -115,35 +108,31 @@ class AuthController extends Controller
         $country = $user->country;    // Relación belongsTo con Country
     
         // Construir la respuesta del usuario
-        $userResponse = [
-            'id' => $user->id,
-            'name' => $user->name,
-            'surname' => $user->surname,
-            'email' => $user->email,
-            'company' => $user->company,
-            'nif' => $user->nif,
-            'address' => $user->address,
-            'city' => $user->city,
-            'zip_code' => $user->zip_code,
-            'phone' => $user->phone,
-            'prefix_id' => $user->prefix_id,
-            'code_prefix' => $country->codeISO2 ?? null, // Manejo de nulos
-            'role_id' => $role->id ?? null,              // Manejo de nulos
-            'role' => $role->name ?? null,               // Nombre del rol (manejo de nulos)
-            'country_id' => $user->country_id,
-            'country' => __('countries.' . ($country->language_field ?? '')), // Manejo de nulos
-            'email_verified_at' => $user->email_verified_at,
-        ];
+        //$userResponse = [
+            //'id' => $user->id,
+            //'name' => $user->name,
+            //'surname' => $user->surname,
+            //'email' => $user->email,
+            //'company' => $user->company,
+            //'nif' => $user->nif,
+            //'address' => $user->address,
+            //'city' => $user->city,
+            //'zip_code' => $user->zip_code,
+            //'phone' => $user->phone,
+            //'prefix_id' => $user->prefix_id,
+            //'code_prefix' => $country->codeISO2 ?? null, // Manejo de nulos
+            //'role_id' => $role->id ?? null,              // Manejo de nulos
+            //'role' => $role->name ?? null,               // Nombre del rol (manejo de nulos)
+            //'country_id' => $user->country_id,
+            //'country' => __('countries.' . ($country->language_field ?? '')), // Manejo de nulos
+            //'email_verified_at' => $user->email_verified_at,
+        //];
 
-        // Para localhost
-        $cookie = cookie('refresh_token', $refreshToken, 60, null, null, false, true); // 60 minutes, HttpOnly
-
-        // Para producción
-        // $cookie = cookie('access_token', $accessToken, 60, '/', 'yourdomain.com', true, true); // 60 minutes, Secure, HttpOnly
+        $cookie = create_cookie($refreshToken);
 
         return response()->json([
             'message' => 'Inicio de sesión exitoso',
-            'user' => $userResponse,
+            //'user' => $userResponse,
             'access_token' => $accessToken,
         ], 200)->cookie($cookie);
     }
@@ -282,11 +271,7 @@ class AuthController extends Controller
             $accessToken = $tokenResult->accessToken;
             $refreshToken = $tokenResult->token->id; 
 
-            // Para localhost
-            $cookie = cookie('refresh_token', $refreshToken, 60, null, null, false, true); // 60 minutes, HttpOnly
-
-            // Para producción
-            // $cookie = cookie('access_token', $accessToken, 60, '/', 'yourdomain.com', true, true); // 60 minutes, Secure, HttpOnly
+            $cookie = create_cookie($refreshToken);
 
             return response()->json([
                 'message' => 'Token refreshed successfully',

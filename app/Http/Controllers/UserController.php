@@ -44,12 +44,8 @@ class UserController extends Controller
             $accessToken = $tokenResult->accessToken;
             $refreshToken = $tokenResult->token->id; 
 
-            // Para localhost
-            $cookie = cookie(name: 'refresh_token', value: $refreshToken, minutes: 60, path: null, domain: 'localhost', secure: false, httpOnly: true); // 60 minutes, HttpOnly
-
-            // Para producción
-            // $cookie = cookie('access_token', $accessToken, 60, '/', 'yourdomain.com', true, true); // 60 minutes, Secure, HttpOnly
-
+            $cookie = create_cookie($refreshToken);
+            
             DB::commit();
 
             return response()->json([
